@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.server.mapper.QuestionsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.server.pojo.Questions">
+        <id column="id" property="id" />
+        <result column="title" property="title" />
+        <result column="content" property="content" />
+        <result column="difficulty" property="difficulty" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, title, content, difficulty
+    </sql>
+
+    <!--id写到接口中方法名  parameterType输入参数类型-->
+    <!--useGeneratedKeys:设置是否使用JDBC的getGenereatedKeys方法获取主键并赋值到keyProperty设置的领域模型属性中-->
+    <insert id="saveQuestionReturnId" keyProperty="id" useGeneratedKeys="true" parameterType="com.example.server.pojo.Questions">
+        insert into questions(title,content,difficulty) values(#{title},#{content},#{difficulty})
+    </insert>
+
+    <!-- 多条件查询题目-->
+
+
+</mapper>

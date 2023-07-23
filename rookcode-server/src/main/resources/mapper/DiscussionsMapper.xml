@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.server.mapper.DiscussionsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.server.pojo.Discussions">
+        <id column="id" property="id" />
+        <result column="user_id" property="userId" />
+        <result column="title" property="title" />
+        <result column="content" property="content" />
+        <result column="view_num" property="viewNum" />
+        <result column="submit_date" property="submitDate" />
+    </resultMap>
+
+    <!-- 获取讨论区话题列表的查询映射结果-->
+    <resultMap type="com.example.server.dto.Discussion.GetDiscussionResp"
+               id="RespGetDiscussionMap">
+        <id property="id" column="id"/>
+        <result property="avatar" column="avatar"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="view_num" column="view_num"/>
+        <result property="like_num" column="like_num"/>
+        <result property="comments_num" column="comments_num"/>
+        <result property="is_liked" column="is_liked"/>
+        <result property="dateTime" column="dateTime"/>
+    </resultMap>
+
+    <!-- 获取讨论区话题的评论列表的查询映射结果-->
+    <resultMap id="GetCommentRespMap" type="com.example.server.dto.Discussion.GetCommentResp">
+        <id column="comment_id" property="comment_id"/>
+        <result column="user_id" property="user_id"/>
+        <result column="nickname" property="nickname"/>
+        <result column="avatar" property="avatar"/>
+        <result column="datetime" property="datetime"/>
+        <result column="content" property="content"/>
+        <result column="account" property="account"/>
+    </resultMap>
+
+    <!-- 通过id获取话题详情-->
+    <resultMap id="getDiscussionByIdRespMap" type="com.example.server.dto.Discussion.GetDiscussionByIdResp">
+        <result column="avatar" property="avatar"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="view_num" property="view_num"/>
+        <result column="like_num" property="like_num"/>
+        <result column="comments_num" property="comments_num"/>
+        <result column="is_liked" property="is_liked"/>
+        <result column="datetime" property="dateTime"/>
+        <result column="authorId" property="authorId"/>
+        <result column="nickname" property="nickname"/>
+        <result column="account" property="account"/>
+    </resultMap>
+
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, user_id, title, content, view_num, submit_date
+    </sql>
+
+    <!-- 根据页数查询讨论-->
+    <select id="getDiscussions" resultMap="RespGetDiscussionMap">
+        SELECT
+            d.id,
+            u.avatar,
+            d.title,
+            SUBSTRING(d.content, 1, 100) AS description,
+            d.view_num,
+            (SELECT COUNT(*) FROM discussion_like WHERE discussion_id = d.id) AS like_num,
+            (SELECT COUNT(*) FROM discussion_comments WHERE discussion_id = d.id) AS comments_num,
+            IF((SELECT COUNT(*) FROM discussion_like WHERE discussion_id = d.id AND user_id = #{userId}) > 0, true, false) AS is_liked,
+            d.submit_date AS dateTime
+        FROM
+            discussions d
+                LEFT JOIN
+            users u ON d.user_id = u.id
+        ORDER BY d.submit_date DESC
+    </select>
+
+    <!-- 根据页数、发布人id查询讨论-->
+    <select id="getDiscussionsByUser" resultMap="RespGetDiscussionMap">
+        SELECT
+            d.id,
+            u.avatar,
+            d.title,
+            SUBSTRING(d.content, 1, 100) AS description,
+            d.view_num,
+            (SELECT COUNT(*) FROM discussion_like WHERE discussion_id = d.id) AS like_num,
+            (SELECT COUNT(*) FROM discussion_comments WHERE discussion_id = d.id) AS comments_num,
+            IF((SELECT COUNT(*) FROM discussion_like WHERE discussion_id = d.id AND user_id = #{userId}) > 0, true, false) AS is_liked,
+            d.submit_date AS dateTime
+        FROM
+            discussions d
+                LEFT JOIN
+            users u ON d.user_id = u.id
+        WHERE d.user_id = #{userId}
+        ORDER BY d.submit_date DESC
+    </select>
+
+    <!-- 根据组合条件查询讨论-->
+    <select id="findDiscussions" resultMap="RespGetDiscussionMap">
+        SELECT
+            d.id,
+            u.avatar,
+            d.title,
+            SUBSTRING(d.content, 1, 100) AS description,
+            d.view_num,
+            (SELECT COUNT(*) FROM discussion_like WHERE discussion_id = d.id) AS like_num,
+            (SELECT COUNT(*) FROM discussion_comments WHERE discussion_id = d.id) AS comments_num,
+            IF((SELECT COUNT(*) FROM discussion_like WHERE discussion_id = d.id AND user_id = #{userId}) > 0, true, false) AS is_liked,
+            d.submit_date AS dateTime
+        FROM
+            discussions d
+                LEFT JOIN
+            users u ON d.user_id = u.id
+        WHERE
+            IFNULL(d.title,'') LIKE CONCAT('%',#{title},'%')
+        ORDER BY d.submit_date DESC
+    </select>
+
+    <!-- 根据id查询讨论-->
+    <select id="getDiscussionById" resultMap="getDiscussionByIdRespMap">
+        SELECT
+            u.avatar,
+            d.title,
+            d.content,
+            d.view_num,
+            (SELECT COUNT(*) FROM discussion_like WHERE discussion_id = d.id) AS like_num,
+            (SELECT COUNT(*) FROM discussion_comments WHERE discussion_id = d.id) AS comments_num,
+            IF((SELECT COUNT(*) FROM discussion_like WHERE discussion_id = d.id AND user_id = #{userId}) > 0, true, false) AS is_liked,
+            d.submit_date AS datetime,
+            u.id AS authorId,
+            u.nickname,
+            u.account
+        FROM
+            discussions d
+                LEFT JOIN
+            users u ON d.user_id = u.id
+        WHERE
+            d.id = #{discussionId}
+    </select>
+
+
+    <!-- 根据页数获取话题的评论-->
+    <select id="getComments" resultMap="GetCommentRespMap">
+        SELECT
+            dc.id AS comment_id,
+            u.id AS user_id,
+            u.nickname,
+            u.avatar,
+            dc.submit_date AS datetime,
+            dc.content,
+            u.account
+        FROM
+            discussion_comments dc
+                LEFT JOIN
+            users u ON dc.publisher_id = u.id
+        WHERE dc.discussion_id = #{discussionId}
+        ORDER BY dc.submit_date DESC
+    </select>
+
+</mapper>

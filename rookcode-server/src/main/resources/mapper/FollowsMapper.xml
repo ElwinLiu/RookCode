@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.server.mapper.FollowsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.server.pojo.Follows">
+        <id column="id" property="id"/>
+        <result column="follower_id" property="followerId"/>
+        <result column="followee_id" property="followeeId"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id
+        , follower_id, followee_id, created_at
+    </sql>
+
+    <!--    获取 关注了 数量-->
+    <select id="countFollowersByAccount" resultType="int">
+        SELECT COUNT(*)
+        FROM follows
+        WHERE followee_id = (SELECT id FROM users WHERE account = #{account});
+    </select>
+
+    <!--    获取 被关注了 数量-->
+    <select id="countFolloweesByAccount" resultType="int">
+        SELECT COUNT(*)
+        FROM follows
+        WHERE follower_id = (SELECT id FROM users WHERE account = #{account});
+    </select>
+
+
+    <resultMap id="FollowEntityResultMap" type="com.example.server.dto.Follow.FollowEntity">
+        <id column="account" property="account"/>
+        <result column="avatar" property="avatar"/>
+        <result column="nickname" property="nickname"/>
+        <result column="description" property="description"/>
+        <result column="mutual" property="mutual"/>
+    </resultMap>
+
+    <!--    获取 关注了 列表-->
+    <select id="getFollowersByAccount" resultType="com.example.server.dto.Follow.FollowEntity"
+            resultMap="FollowEntityResultMap">
+        SELECT u.account,
+               u.avatar,
+               u.nickname,
+               u.description,
+               CASE WHEN fs.follower_id IS NOT NULL THEN true ELSE false END AS mutual
+        FROM follows f
+                 JOIN users u ON f.follower_id = u.id
+                 LEFT JOIN follows fs ON fs.follower_id = f.followee_id AND fs.followee_id = f.follower_id
+        WHERE f.followee_id = (SELECT id
+                               FROM users
+                               WHERE account = #{account})
+        ORDER BY f.created_at DESC
+            LIMIT #{start}, #{count};
+    </select>
+
+    <!--    获取 被关注了 列表-->
+    <select id="getFolloweesByAccount" resultType="com.example.server.dto.Follow.FollowEntity"
+            resultMap="FollowEntityResultMap">
+        SELECT u.account,
+               u.avatar,
+               u.nickname,
+               u.description,
+               CASE WHEN fs.follower_id IS NOT NULL THEN true ELSE false END AS mutual
+        FROM follows f
+                 JOIN users u ON f.followee_id = u.id
+                 LEFT JOIN follows fs ON fs.follower_id = f.followee_id AND fs.followee_id = f.follower_id
+        WHERE f.follower_id = (SELECT id
+                               FROM users
+                               WHERE account = #{account})
+        ORDER BY f.created_at DESC
+            LIMIT #{start}, #{count};
+    </select>
+
+    <resultMap id="FollowEntityV3ResultMap" type="com.example.server.dto.Follow.FollowEntityV3">
+        <id column="account" property="account"/>
+        <result column="avatar" property="avatar"/>
+        <result column="nickname" property="nickname"/>
+        <result column="description" property="description"/>
+        <result column="following" property="following"/>
+        <result column="followed" property="followed"/>
+    </resultMap>
+
+    <!--    获取 关注了 列表-->
+    <select id="getFollowersByAccountV3" resultType="com.example.server.dto.Follow.FollowEntityV3"
+            resultMap="FollowEntityV3ResultMap">
+        SELECT users.account,
+               users.avatar,
+               users.nickname,
+               users.description,
+               COALESCE(follows.created_at, follows2.created_at, now()) AS follow_time,
+               follows1.id IS NOT NULL                                  AS following,
+               follows2.id IS NOT NULL                                  AS followed
+        FROM follows
+                 INNER JOIN users ON follows.follower_id = users.id
+                 LEFT JOIN follows AS follows1 ON follows1.follower_id = users.id AND
+                                                  follows1.followee_id =
+                                                  (select id from users where account = #{myAccount})
+                 LEFT JOIN follows AS follows2 ON follows2.followee_id = users.id AND
+                                                  follows2.follower_id =
+                                                  (select id from users where account = #{myAccount})
+        WHERE follows.followee_id = (select id from users where account = #{account})
+        ORDER BY follow_time DESC
+            LIMIT #{start}, #{count};
+    </select>
+
+    <!--    获取 被关注了 列表-->
+    <select id="getFolloweesByAccountV3" resultType="com.example.server.dto.Follow.FollowEntityV3"
+            resultMap="FollowEntityV3ResultMap">
+        SELECT users.account,
+               users.avatar,
+               users.nickname,
+               users.description,
+               COALESCE(follows.created_at, follows2.created_at, now()) AS follow_time,
+               follows1.id IS NOT NULL                                  AS following,
+               follows2.id IS NOT NULL                                  AS followed
+        FROM follows
+                 INNER JOIN users ON follows.followee_id = users.id
+                 LEFT JOIN follows AS follows1 ON follows1.follower_id = users.id AND
+                                                  follows1.followee_id =
+                                                  (select id from users where account = #{myAccount})
+                 LEFT JOIN follows AS follows2 ON follows2.followee_id = users.id AND
+                                                  follows2.follower_id =
+                                                  (select id from users where account = #{myAccount})
+        WHERE follows.follower_id = (select id from users where account = #{account})
+        ORDER BY follow_time DESC
+            LIMIT #{start}, #{count};
+    </select>
+</mapper>

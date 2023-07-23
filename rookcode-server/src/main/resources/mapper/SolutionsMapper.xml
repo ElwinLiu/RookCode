@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.server.mapper.SolutionsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.server.pojo.Solutions">
+        <id column="id" property="id" />
+        <result column="question_id" property="questionId" />
+        <result column="author_id" property="authorId" />
+        <result column="title" property="title" />
+        <result column="content" property="content" />
+        <result column="like_num" property="likeNum" />
+        <result column="view_num" property="viewNum" />
+        <result column="submit_date" property="submitDate" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, question_id, author_id, title, content, like_num, view_num, submit_date,version
+    </sql>
+
+    <!-- 通过标签和名字查询-->
+    <select id="findSolutions" resultMap="BaseResultMap">
+        SELECT DISTINCT s.*
+        FROM solutions s
+                 LEFT JOIN solution_tags_map m ON s.id = m.solution_id
+                 LEFT JOIN solution_tags t ON m.tag = t.id
+        WHERE IFNULL(t.name,'') like CONCAT('%',#{tagName},'%')
+          AND IFNULL(s.title,'') LIKE CONCAT('%',#{titleKeyword},'%')
+          AND s.question_id = #{question_id}
+        ORDER BY s.submit_date DESC
+    </select>
+
+    <!-- 按条件查询所有题解的个数-->
+    <select id="findSolutionsCnt" resultType="java.lang.Integer">
+        SELECT count(DISTINCT s.id)
+        FROM solutions s
+                 LEFT JOIN solution_tags_map m ON s.id = m.solution_id
+                 LEFT JOIN solution_tags t ON m.tag = t.id
+        WHERE IFNULL(t.name,'') like CONCAT('%',#{tagName},'%')
+          AND IFNULL(s.title,'') LIKE CONCAT('%',#{titleKeyword},'%')
+          AND s.question_id = #{question_id}
+    </select>
+
+    <!-- 按题解id查询该题解包含的标签内容-->
+    <select id="findTagsBySolutionId" resultType="java.lang.String">
+        SELECT t.name
+        FROM solutions s
+                 JOIN solution_tags_map m ON s.id = m.solution_id
+                 JOIN solution_tags t ON m.tag = t.id
+        WHERE s.id = #{solutionId}
+    </select>
+
+
+    <!-- 根据 ID 自增 view_num 字段 -->
+    <update id="increaseViewNumById">
+        UPDATE solutions SET view_num = view_num + 1 WHERE id = #{id}
+    </update>
+
+</mapper>
